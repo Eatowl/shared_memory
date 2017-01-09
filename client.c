@@ -1,41 +1,60 @@
 #include <stdio.h>
 #include <string.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include "message.h"
 
-#define SEM_KEY 2017
-#define SHM_KEY 2017
-
+void sys_err(char *msg) {
+	puts(msg);
+	exit(1);
+}
 
 int main() {
-
 	int shm_id, sem_id;
-	char * shm_buf;
-	struct sembuf sb[1];
-	shm_id = shmget (SHM_KEY, 1, 0600);
-	if (shm_id == -1) {
-		fprintf (stderr, "shmget() error\n");
-		return 1;
+	char s[MAX_STRING];
+	message_t *msg_p;
+	
+	if ((sem_id = semget(SEM_ID, 1, 0)) < 0)
+		sys_err("server: can not get semaphore");
+	if ((shm_id = shmget(SHM_ID, sizeof(message_t), 0)) < 0)
+		sys_err("server: can not get shared memory segment");
+	if ((msg_p = (message_t *) shmat(shm_id, 0, 0)) == NULL)
+		sys_err("server: shared memory attach error");
+
+	pid_t pid;
+	if(!(pid = fork())) {
+		while (1) {
+			scanf("%s", s);
+			while (semctl(sem_id, 0, SETVAL, 0) || msg_p->type != MSG_TYPE_EMPTY)
+				continue;
+			semctl(sem_id, 0, SETVAL, 1);
+			if (strlen(s) != 1) {
+				msg_p->type = MSG_TYPE_STRING;
+				strncpy(msg_p->string, s, MAX_STRING);
+			} else {
+				msg_p->type = MSG_TYPE_FINISH;
+			};
+			semctl(sem_id, 0, SETVAL, 0);
+			if (strlen(s) == 1)
+				break;
+		}
+		return 0;
 	}
-	printf("shm_id %d\n", shm_id);
-	sem_id = semget (SEM_KEY, 1, 0600);
-	if (sem_id == -1) {
-		fprintf (stderr, "semget() error\n");
-		return 1;
+
+	while (1) {
+		if (msg_p->type != MSG_TYPE_EMPTY) {
+			if (semctl(sem_id, 0, GETVAL, 0))
+				continue;
+			semctl(sem_id, 0, SETVAL, 1);
+			if (msg_p->type == MSG_TYPE_STRING)
+				printf("%s\n", msg_p->string);
+			if (msg_p->type == MSG_TYPE_FINISH)
+				break;
+			msg_p->type = MSG_TYPE_EMPTY;
+			semctl(sem_id, 0, SETVAL, 0);
+		}
 	}
-	shm_buf = (char *) shmat (shm_id, 0, 0);
-	if (shm_buf == (char *) -1) {
-		fprintf (stderr, "shmat() error\n");
-		return 1;
-	}
-	printf ("Message: %s\n", shm_buf);
-	sb[0].sem_num = 0;
-	sb[0].sem_flg = SEM_UNDO;
-	sb[0].sem_op = 1;
-	semop (sem_id, sb, 1);
-	shmdt (shm_buf);
-	/*
-	client code
-	*/
-	return 0;
+	shmdt(msg_p);
+	exit(0);
 }
