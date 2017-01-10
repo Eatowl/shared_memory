@@ -30,12 +30,14 @@ int main() {
 			if (semctl(sem_id, 0, GETVAL, 0))
 				continue;
 			semctl(sem_id, 0, SETVAL, 1);
+			printf("semaphore lock\n");
 			if (msg_p->type == MSG_TYPE_STRING)
 				printf("%s\n", msg_p->string);
 			if (msg_p->type == MSG_TYPE_FINISH)
 				break;
 			msg_p->type = MSG_TYPE_EMPTY;
 			semctl(sem_id, 0, SETVAL, 0);
+			printf("semaphore unlock\n");
 		}
 	}
 

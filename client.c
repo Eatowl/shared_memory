@@ -25,10 +25,13 @@ int main() {
 	pid_t pid;
 	if(!(pid = fork())) {
 		while (1) {
+			//fflush(stdin);
+      		//fgets(s, MAX_STRING, stdin);
 			scanf("%s", s);
 			while (semctl(sem_id, 0, SETVAL, 0) || msg_p->type != MSG_TYPE_EMPTY)
 				continue;
 			semctl(sem_id, 0, SETVAL, 1);
+			printf("semaphore lock - write\n");
 			if (strlen(s) != 1) {
 				msg_p->type = MSG_TYPE_STRING;
 				strncpy(msg_p->string, s, MAX_STRING);
@@ -36,23 +39,25 @@ int main() {
 				msg_p->type = MSG_TYPE_FINISH;
 			};
 			semctl(sem_id, 0, SETVAL, 0);
+			printf("semaphore unlock - write\n");
 			if (strlen(s) == 1)
 				break;
 		}
 		return 0;
 	}
-
 	while (1) {
 		if (msg_p->type != MSG_TYPE_EMPTY) {
 			if (semctl(sem_id, 0, GETVAL, 0))
 				continue;
-			semctl(sem_id, 0, SETVAL, 1);
+			//semctl(sem_id, 0, SETVAL, 1);
+			//printf("semaphore lock - read\n");
 			if (msg_p->type == MSG_TYPE_STRING)
 				printf("%s\n", msg_p->string);
 			if (msg_p->type == MSG_TYPE_FINISH)
 				break;
-			msg_p->type = MSG_TYPE_EMPTY;
-			semctl(sem_id, 0, SETVAL, 0);
+			//msg_p->type = MSG_TYPE_EMPTY;
+			//semctl(sem_id, 0, SETVAL, 0);
+			printf("semaphore unlock - read\n");
 		}
 	}
 	shmdt(msg_p);
