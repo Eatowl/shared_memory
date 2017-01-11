@@ -12,7 +12,7 @@ void sys_err(char *msg) {
 
 int main() {
 	int shm_id, sem_id;
-	int flag_message = 0;
+	int count_message = 0;
 	char s[MAX_STRING];
 	message_t *msg_p;
 	
@@ -28,21 +28,18 @@ int main() {
 	msg_p->count = 0;
 
 	while (1) {
-		if (msg_p->count > flag_message) {
-			if (msg_p->type != MSG_TYPE_EMPTY) {
-				if (semctl(sem_id, 0, GETVAL, 0))
-					continue;
-				semctl(sem_id, 0, SETVAL, 1);
-				printf("semaphore lock\n");
-				if (msg_p->type == MSG_TYPE_STRING)
-					printf("%s\n", msg_p->string);
-				if (msg_p->type == MSG_TYPE_FINISH)
-					break;
-				//msg_p->type = MSG_TYPE_EMPTY;
-				flag_message = msg_p->count;
-				semctl(sem_id, 0, SETVAL, 0);
-				printf("semaphore unlock\n");
+		if (msg_p->count > count_message) {
+			if (semctl(sem_id, 0, GETVAL, 0))
+				continue;
+			semctl(sem_id, 0, SETVAL, 1);
+			if (msg_p->type == MSG_TYPE_STRING)
+				printf("%s\n", msg_p->string);
+			if (msg_p->type == MSG_TYPE_FINISH) {
+				printf("exit");
+				break;
 			}
+			count_message = msg_p->count;
+			semctl(sem_id, 0, SETVAL, 0);
 		}
 	}
 
