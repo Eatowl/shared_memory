@@ -15,7 +15,6 @@ int main() {
 	int count_message = 0;
 	char s[MAX_STRING];
 	message_t *msg_p;
-	
 	if ((sem_id = semget(SEM_ID, 1, PERMS | IPC_CREAT)) < 0)
 		sys_err("server: can not create semaphore");
 	if ((shm_id = shmget(SHM_ID, sizeof(message_t), PERMS | IPC_CREAT)) < 0)
