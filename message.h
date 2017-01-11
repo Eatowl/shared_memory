@@ -15,5 +15,6 @@
 
 typedef struct {
 	int type;
+	int count;
 	char string[MAX_STRING];
 } message_t;

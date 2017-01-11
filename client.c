@@ -12,6 +12,7 @@ void sys_err(char *msg) {
 
 int main() {
 	int shm_id, sem_id;
+	int flag_message = 0;
 	char s[MAX_STRING];
 	message_t *msg_p;
 	
@@ -34,6 +35,8 @@ int main() {
 			printf("semaphore lock - write\n");
 			if (strlen(s) != 1) {
 				msg_p->type = MSG_TYPE_STRING;
+				++msg_p->count;
+				printf("%d\n", msg_p->count);
 				strncpy(msg_p->string, s, MAX_STRING);
 			} else {
 				msg_p->type = MSG_TYPE_FINISH;
@@ -45,19 +48,35 @@ int main() {
 		}
 		return 0;
 	}
+	char story[MAX_STRING];
+	//int flag_message = 0;
 	while (1) {
-		if (msg_p->type != MSG_TYPE_EMPTY) {
+		if (msg_p->count > flag_message) {
 			if (semctl(sem_id, 0, GETVAL, 0))
-				continue;
-			//semctl(sem_id, 0, SETVAL, 1);
-			//printf("semaphore lock - read\n");
-			if (msg_p->type == MSG_TYPE_STRING)
-				printf("%s\n", msg_p->string);
-			if (msg_p->type == MSG_TYPE_FINISH)
-				break;
-			//msg_p->type = MSG_TYPE_EMPTY;
-			//semctl(sem_id, 0, SETVAL, 0);
-			printf("semaphore unlock - read\n");
+				//continue;
+				//semctl(sem_id, 0, SETVAL, 1);
+				//if (strcmp(story, msg_p->string) == 0) {
+				//	printf("!!!!!!!!!!!!!");
+				//} else {
+				//	flag_message = 0;
+				//}
+				//semctl(sem_id, 0, SETVAL, 0);
+
+			//if (flag_message == 0) {
+				semctl(sem_id, 0, SETVAL, 1);
+				printf("semaphore lock - read\n");
+				if (msg_p->type == MSG_TYPE_STRING)
+					printf("%d\n", msg_p->count);
+					printf("%s\n", msg_p->string);
+				strncpy(story, s, MAX_STRING);
+				if (msg_p->type == MSG_TYPE_FINISH)
+					break;
+				msg_p->type = MSG_TYPE_EMPTY;
+				flag_message = msg_p->count;
+				semctl(sem_id, 0, SETVAL, 0);
+				printf("semaphore unlock - read\n");
+			//flag_message = 1;
+			//}
 		}
 	}
 	shmdt(msg_p);
